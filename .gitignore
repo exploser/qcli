@@ -42,3 +42,6 @@ CMakeLists.txt.user
 *.vcxproj
 *.filters
 *.sln
+*.user
+*.sdf
+*.opendb
