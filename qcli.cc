@@ -61,6 +61,7 @@ int CLI::Run() {
         args.push_back(QString(word.c_str()));
       }
       if (args[0] == "quit" || args[0] == "exit") {
+        emit Exit();
         return OK;
       }
       QList<QString> tmp = storage_.keys();
@@ -140,5 +141,6 @@ CLI::CLI() {
 }
 
 CLI::~CLI() {
+  instance_->ClearUnsafeStorage();
   delete instance_;
 }

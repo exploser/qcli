@@ -7,11 +7,14 @@
 #include <QTextStream>
 #include <QThread>
 #include <QString>
+#include <QObject>
 
 #define COMMAND(cmd) CLI::Status cmd(const std::vector<QString>& args, void* data)
 #define AddCommandM(cmd) AddCommand(#cmd, cmd)
 
-class CLI {
+class CLI : public QObject {
+  Q_OBJECT
+
  public:
   enum Status {
     OK,
@@ -37,6 +40,9 @@ class CLI {
   QMap<QString, Command_s> commands_;
 
   QMap<QString, std::shared_ptr<void>> storage_;
+
+ signals:
+  void Exit();
 
  public:
   static CLI* Instance();
