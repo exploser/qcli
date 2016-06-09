@@ -9,10 +9,9 @@
 #include <QString>
 #include <QObject>
 
-#define COMMAND(cmd) CLI::Status cmd(const std::vector<QString>& args, void* data)
-#define AddCommandM(cmd) AddCommand(#cmd, cmd)
+#define CLI_COMMAND(cmd) QCli::Status cmd(const std::vector<QString>& args, void* data)
 
-class CLI : public QObject {
+class QCli : public QObject {
   Q_OBJECT
 
  public:
@@ -23,7 +22,7 @@ class CLI : public QObject {
     INTERNAL_ERROR,
   };
 
-  typedef Status(*Command) (const std::vector<QString>& args, void* data);
+  typedef Status (*Command)(const std::vector<QString>& args, void* data);
 
   struct Command_s {
     Command exec;
@@ -31,21 +30,24 @@ class CLI : public QObject {
   };
 
  private:
-  CLI();
-  CLI(const CLI&) {};
-  ~CLI();
-  CLI& operator=(CLI&) {};
+  QCli();
+  QCli(const QCli&) {};
+  ~QCli();
+  QCli& operator=(QCli&) {};
 
-  static CLI* instance_;
+  static QCli* instance_;
   QMap<QString, Command_s> commands_;
 
   QMap<QString, std::shared_ptr<void>> storage_;
 
  signals:
+  void CommandExecuteBefore(QString command_name);
+  void CommandExecuteAfter(QString command_name);
+  void CommandExecuteError(QString command_name);
   void Exit();
 
  public:
-  static CLI* Instance();
+  static QCli* Instance();
 
   // Parse entered command. Args should contain command name and (optional) its arguments
   Status Parse(const std::vector<QString>& args);

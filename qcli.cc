@@ -3,30 +3,37 @@
 #include <iostream>
 #include <sstream>
 
-CLI* CLI::instance_ = nullptr;
+QCli* QCli::instance_ = nullptr;
 
-CLI* CLI::Instance() {
+QCli* QCli::Instance() {
   if (instance_) {
     return instance_;
   } else {
-    return (instance_ = new CLI());
+    return (instance_ = new QCli());
   }
 }
 
-CLI::Status CLI::Parse(const std::vector<QString>& args) {
+QCli::Status QCli::Parse(const std::vector<QString>& args) {
   if (args.size() > 0) {
     std::string name = args[0].toStdString();
     if (commands_[args.front()].exec != nullptr) {
       Command_s command = commands_[args.front()];
+
+      // tell everyone we are about to execute that command, then tell them we're done executing
+      emit CommandExecuteBefore(args[0]);
       Status result = command.exec(args, command.data);
+      emit CommandExecuteAfter(args[0]);
+
       switch (result) {
       default:
       case OK:
         break;
       case INCORRECT_ARGUMENT:
+        emit CommandExecuteError(args[0]);
         std::cout << "Incorrect parameters passed to function " << name << "." << std::endl;
         break;
       case INTERNAL_ERROR:
+        emit CommandExecuteError(args[0]);
         std::cout << "Internal error occured." << std::endl;
         break;
       }
@@ -40,13 +47,13 @@ CLI::Status CLI::Parse(const std::vector<QString>& args) {
   return INCORRECT_COMMAND;
 }
 
-void CLI::AddCommand(const QString& name, Command cmd, void* callback) {
+void QCli::AddCommand(const QString& name, Command cmd, void* callback) {
   if (cmd != nullptr) {
     commands_[name] = { cmd, callback };
   }
 }
 
-int CLI::Run() {
+int QCli::Run() {
   std::vector<QString> args;
   char lastarg[1024];
   std::string name;
@@ -83,7 +90,7 @@ int CLI::Run() {
   return OK;
 }
 
-std::shared_ptr<void> CLI::GetUnsafeStorage(const QString& key) {
+std::shared_ptr<void> QCli::GetUnsafeStorage(const QString& key) {
   if (storage_.contains(key)) {
     return storage_[key];
   } else {
@@ -91,56 +98,56 @@ std::shared_ptr<void> CLI::GetUnsafeStorage(const QString& key) {
   }
 }
 
-void CLI::SetUnsafeStorage(const QString& key, std::shared_ptr<void> data) {
+void QCli::SetUnsafeStorage(const QString& key, std::shared_ptr<void> data) {
   storage_[key] = data;
 }
 
-void CLI::UnsetUnsafeStorage(const QString& key) {
+void QCli::UnsetUnsafeStorage(const QString& key) {
   storage_.remove(key);
 }
 
-void CLI::ClearUnsafeStorage() {
+void QCli::ClearUnsafeStorage() {
   storage_.clear();
 }
 
-const QList<QString> CLI::SupportedCommands() const {
+const QList<QString> QCli::SupportedCommands() const {
   return commands_.keys();
 }
 
 // commands
 
-COMMAND(help) {
+CLI_COMMAND(help) {
   Q_UNUSED(args);
   Q_UNUSED(data);
 
-  CLI *i = CLI::Instance();
+  QCli *i = QCli::Instance();
 
   std::cout << "The following commands are currently supported: " << std::endl;
   for (QString command : i->SupportedCommands()) {
     std::cout << "\t" << command.toStdString() << std::endl;
   }
 
-  return CLI::OK;
+  return QCli::OK;
 }
 
-COMMAND(cleanup) {
+CLI_COMMAND(cleanup) {
   Q_UNUSED(data);
 
-  CLI *i = CLI::Instance();
+  QCli *i = QCli::Instance();
   std::cout << args[0].toStdString() << ": Clearing unsafe storage... ";
   i->ClearUnsafeStorage();
   std::cout << "Done." << std::endl;
 
-  return CLI::OK;
+  return QCli::OK;
 }
 
-CLI::CLI() {
+QCli::QCli() {
   commands_["help"].exec = help;
   commands_["usage"].exec = help;
   commands_["cleanup"].exec = cleanup;
 }
 
-CLI::~CLI() {
+QCli::~QCli() {
   instance_->ClearUnsafeStorage();
   delete instance_;
 }
