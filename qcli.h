@@ -31,9 +31,9 @@ class QCli : public QObject {
 
  private:
   QCli();
-  QCli(const QCli&) {};
+  QCli(const QCli&) {}
   ~QCli();
-  QCli& operator=(QCli&) {};
+  QCli& operator=(QCli&) {}
 
   static QCli* instance_;
   QMap<QString, Command_s> commands_;
@@ -74,5 +74,14 @@ class QCli : public QObject {
 
   const QList<QString> SupportedCommands() const;
 
-  QTextStream output;
+  QTextStream output { stdout, QIODevice::WriteOnly };
+  QTextStream input { stdin, QIODevice::ReadOnly };
+};
+
+class QCliExtension : public QObject {
+  Q_OBJECT
+
+ public:
+  // Register custom commands associated with this extension
+  static void Register() {}
 };

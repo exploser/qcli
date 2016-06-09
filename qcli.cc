@@ -1,6 +1,6 @@
 #include "qcli.h"
 
-#include <iostream>
+#include <cstdio>
 #include <sstream>
 
 QCli* QCli::instance_ = nullptr;
@@ -15,7 +15,7 @@ QCli* QCli::Instance() {
 
 QCli::Status QCli::Parse(const std::vector<QString>& args) {
   if (args.size() > 0) {
-    std::string name = args[0].toStdString();
+    QString name = args[0];
     if (commands_[args.front()].exec != nullptr) {
       Command_s command = commands_[args.front()];
 
@@ -30,17 +30,17 @@ QCli::Status QCli::Parse(const std::vector<QString>& args) {
         break;
       case INCORRECT_ARGUMENT:
         emit CommandExecuteError(args[0]);
-        std::cout << "Incorrect parameters passed to function " << name << "." << std::endl;
+        output << "Incorrect parameters passed to function " << name << "." << endl;
         break;
       case INTERNAL_ERROR:
         emit CommandExecuteError(args[0]);
-        std::cout << "Internal error occured." << std::endl;
+        output << "Internal error occured." << endl;
         break;
       }
       return result;
     } else {
       commands_.remove(args[0]);
-      std::cout << "Command " << name << " is unknown." << std::endl;
+      output << "Command " << name << " is unknown." << endl;
       commands_["help"].exec(args, nullptr);
     }
   }
@@ -55,12 +55,12 @@ void QCli::AddCommand(const QString& name, Command cmd, void* callback) {
 
 int QCli::Run() {
   std::vector<QString> args;
-  char lastarg[1024];
-  std::string name;
+  QString name;
   for (;;) {
-    std::cout << "> ";
-    std::cin.getline(lastarg, sizeof(lastarg));
-    QStringList splitted = QString(lastarg).split("&&");
+    output << "> ";
+    output.flush();
+    QString lastarg = input.readLine();
+    QStringList splitted = lastarg.split("&&");
     for (QString substr : splitted) {
       std::istringstream iss(substr.toStdString());
       std::string word;
@@ -72,15 +72,19 @@ int QCli::Run() {
         return OK;
       }
       QList<QString> tmp = storage_.keys();
+      
+      // output any info we need to output and execute the command
+      output.flush();
       Status result = Parse(args);  // TODO: parse result
+
       for (QString key : tmp) {
         if (!storage_.keys().contains(key)) {
-          std::cout << "- " << name << ": key `" << key.toStdString() << "` was deleted from storage" << std::endl;
+          output << "- " << name << ": key `" << key << "` was deleted from storage" << endl;
         }
       }
       for (QString key : storage_.keys()) {
         if (!tmp.contains(key)) {
-          std::cout << "+ " << name << ": key `" << key.toStdString() << "` was added to storage" << std::endl;
+          output << "+ " << name << ": key `" << key << "` was added to storage" << endl;
         }
       }
       args.clear();
@@ -122,9 +126,9 @@ CLI_COMMAND(help) {
 
   QCli *i = QCli::Instance();
 
-  std::cout << "The following commands are currently supported: " << std::endl;
+  i->output << "The following commands are currently supported: " << endl;
   for (QString command : i->SupportedCommands()) {
-    std::cout << "\t" << command.toStdString() << std::endl;
+    i->output << "\t" << command << endl;
   }
 
   return QCli::OK;
@@ -134,13 +138,13 @@ CLI_COMMAND(cleanup) {
   Q_UNUSED(data);
 
   QCli *i = QCli::Instance();
-  std::cout << args[0].toStdString() << ": Clearing unsafe storage... ";
+  i->output << args[0] << ": Clearing unsafe storage... ";
   i->ClearUnsafeStorage();
-  std::cout << "Done." << std::endl;
+  i->output << "Done." << endl;
 
   return QCli::OK;
 }
-
+#include <iostream>
 QCli::QCli() {
   commands_["help"].exec = help;
   commands_["usage"].exec = help;
